@@ -1,0 +1,41 @@
+---
+title: "primerRmd"
+author: "yo"
+date: "27 de agosto de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Ejercicio de la clase del lunes 27
+
+Inventamos unos datos
+
+```{r simula}
+# simula el nro de datos
+N<-rpois(1,90)
+# simula las dos variables
+x<-runif(N)
+y<-runif(N)
+dat<-data.frame(x,y)
+```
+En el objeto *dat* es un data.frame que tiene las dos variables simuladas.
+Lo último era usar *kable* para ver el summary del data.frame en el que se juntaron las variables.
+```{r tabla, echo=FALSE}
+library(knitr)
+f<-function(df){
+  min<-apply(df,2,min)
+  q1 <-apply(df,2,quantile, probs=0.25)
+  q2 <-apply(df,2,quantile, probs=0.5)
+  q3 <-apply(df,2,quantile, probs=0.75)
+  max<-apply(df,2,max)
+  r<-rbind(min,q1,q2,q3,max)
+  colnames(r)<-colnames(df)
+  return(r)
+}
+kable(f(dat),digits=3,caption='flor de tabla')
+```
+
+Pronto!
