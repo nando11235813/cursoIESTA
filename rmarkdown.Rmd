@@ -1,0 +1,44 @@
+---
+title: "RMarkdown"
+author: "Fernando Massa"
+date: "10 de septiembre de 2018"
+geometry: margin=3cm
+output: 
+  pdf_document:
+    number_sections: true
+---
+
+# Introducción
+En esta tarea se simulan algunas variables, se calculan estadíisticos de resumen y se hace un dibujo.
+El esquema de simulación es el siguiente:
+
+$N   \sim Po(90)$  cantidad de puntos  
+$x_i \sim Unif(0,1)$  N simulaciones  
+$y_i \sim Unif(0,1)$  N simulaciones  
+
+El link al repositorio es <https://github.com/nando11235813/cursoIESTA>.
+
+# Simulación y tablas
+```{r sim_tabla, echo=FALSE,results='asis', warning=FALSE}
+# indispensable results='asis'
+N<-rpois(1,90)
+x<-runif(N,0,1)
+y<-runif(N,0,1)
+a<-function(x) c(min(x),quantile(x,probs=seq(3)/4),max(x))
+s<-data.frame(x=a(x),y=a(y))
+library(xtable)
+tabla<-xtable(s,caption="titulo de la tabla",label="tab:tabla")
+print.xtable(tabla,caption.placement="top", comment=FALSE)
+# el comment es para que no diga pavadas al imprimir la tabla
+```
+En la Tabla \ref{tab:tabla} se observa que la mediana de las x es `r round(s[3,1],2)`.
+
+# Figura
+
+Y acá está el dibujo
+
+```{r figura, fig.cap="Grafico de dispersion"}
+plot(x,y,xlab='eje x',ylab='eje y',pch=16,col='orange')
+```
+
+
