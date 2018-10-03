@@ -1,0 +1,174 @@
+---
+title: "Segunda tarea"
+author: "Fernando Massa"
+date: "28 de septiembre de 2018"
+geometry: margin=3cm
+output: 
+  pdf_document:
+    number_sections: true
+    fig_caption: yes
+---
+
+La dirección url donde se encuentran los archivos es la siguiente: <https://github.com/nando11235813/cursoIESTA>.
+
+# Ejercicio 1
+
+```{r datos, echo=TRUE, message=FALSE, warning=FALSE}
+# se cargan los datos
+gastolink <- 'https://catalogodatos.gub.uy/dataset/96e636e5-4f78-49a7-8e14-60e90173a0c0/resource/936ac9e6-b0f6-424a-9b53-ee408a91fd6f/download/datos_gastos-por-actos-mdicos-2016.csv'
+
+gastos <- read.csv(gastolink, header = TRUE, dec = ",",encoding="latin1")
+library(tidyverse)
+```
+
+Usando las funciones de la librería `dplyr` respondé:  
+
+  a. ¿Cuál es la prestación con mayor cantidad de actos médicos en Montevideo?  
+```{r uno_a, echo=TRUE}
+cual<-gastos %>%
+  filter(Prestador_departamento=='MONTEVIDEO') %>%
+  group_by(Prestacion) %>%
+  summarise(pres = n()) %>% 
+  filter(pres==max(pres)) %>%
+  select(Prestacion)
+```
+La prestación con el mayor número de actos médicos en Montevideo es `r cual$Prestacion`.
+
+  b. Creá una variable con los totales de actos médicos por Departamento de residencia (`Departamento_residencia`). ¿Cuál es el departamento de residencia con menor cantidad de actos médicos?  
+```{r uno_b, echo=TRUE}
+dpto<-gastos %>%
+  group_by(Departamento_residencia) %>%
+  summarise(act_med = n()) %>% 
+  filter(act_med==min(act_med)) %>%
+  select(Departamento_residencia)
+```
+  El departamento de residencia con el menor número de actos médicos es `r dpto$Departamento_residencia`.  
+
+  c. ¿Qué cantidad de actos médicos son prestados por ASSE o IAMC?  
+```{r uno_c, echo=TRUE}
+cuantos<-gastos %>%
+  group_by(Prestador_tipo) %>%
+  summarise(act_med = n()) %>% 
+  filter(Prestador_tipo %in% c('ASSE','IAMC'))
+```
+  ASSE prestó `r cuantos %>% filter(Prestador_tipo=='ASSE') %>% select(act_med)` mientras que IAMC prestó `r cuantos %>% filter(Prestador_tipo=='IAMC') %>% select(act_med)`.
+
+  d. Cada fila representa un acto médico, por lo que puede haber filas que se correspondan con la misma persona. ¿Cómo se puede verificar si esto es así? ?Cuántos pacientes distintos hay en los datos?  
+```{r uno_d, echo=TRUE}
+npac<- gastos %>%
+  group_by(Paciente) %>%
+  summarise(ene = n()) %>%
+  nrow()
+```
+  El total de pacientes fue de `r npac`  
+
+  e. Crear un nuevo conjunto de datos en que cada fila sea un paciente. Agregar dos variables: el gasto total de la persona en actos médicos y la cantidad de visitas. Conservá el resto de las variables originales menos `Prestacion` e `Importe` (Sugerencia usar `summarise_all`).  
+```{r uno_e, echo=TRUE}
+pucha<-gastos %>%
+  group_by(Paciente) %>%
+  mutate(gasto_total = sum(Importe),
+         visitas = n()) %>%
+  select(-c(Prestacion,Importe)) %>%
+  summarise_all(first)
+# en este natalia me ayudó
+```
+
+
+
+# Ejercicio 2
+
+  a. Replique el siguiente gráfico (Figura \ref{fig:f1}) usando `ggplot2` y `forcats` para ordenar el gráfico.
+```{r dos_a, fig.cap="Proporción de actos médicos según departamento de residencia\\label{fig:f1}"}
+  gastos %>%
+  group_by(Departamento_residencia) %>%
+  summarise(frec= n()/nrow(gastos)) %>%
+  ggplot(aes(x=fct_reorder(Departamento_residencia,frec,sum),y=frec)) +
+    geom_point() + coord_flip() + labs(x="Departamento de residencia",y="Proporción de actos médicos")
+```
+
+  b. Replique el siguiente gráfico (Figura \ref{fig:f2}) usando `ggplot2` y `forcats` para ordenar.
+```{r dos_b, fig.cap="Gráfico de barras de la cantidad de actos m?dicos en Montevideo por tipo de Prestación\\label{fig:f2}"}
+  gastos %>%
+  filter(Prestador_departamento=='MONTEVIDEO') %>%
+  ggplot(aes(x=fct_infreq(Prestacion))) +
+    geom_bar() + labs(x='',y="Total de actos médicos") +
+    theme(axis.text.x=element_text(angle=90,hjust=0.5,size=5))
+```  
+
+  c. Replique el siguiente gráfico (Figura \ref{fig:f3}) usando `ggplot2` y `forcats` para ordenar.  
+  Notar que el orden de los niveles de `Prestacion` fueron ordenados haciendo:  
+  * una variable auxiliar que vale 1 si `Prestador_tipo` es ASSE y 0 en otro caso  
+  * ordenamos los niveles de prestación según la media de la variable auxiliar  
+  * usamos la función `fct_reorder`  
+```{r dos_c, fig_cap="Gráfico de barras apiladas al 100 de la cantidad de actos médicos en Montevideo por tipo de Prestación\\label{fig:f3}"}
+  gastos %>%
+  filter(Departamento_residencia=='MONTEVIDEO') %>%
+  mutate(asse = ifelse(Prestador_tipo=='ASSE',1,0)) %>%
+  ggplot(aes(x=fct_reorder(Prestacion,asse,mean),fill=Prestador_tipo)) + 
+    geom_bar(position="fill") + labs(x="Tipo de Prestación", y="Proporción") + 
+    coord_flip() + theme(axis.text=element_text(size=5), legend.position="bottom")
+```    
+
+
+# Ejercicio 3
+
+  a. Usando ``ggplot2` elabore una visualización que permita responder la pregunta de ¿Cuáles son las 10 instituciones prestadoras (Prestador) que brindaron mayor proporción de actos médicos en Montevideo (`Prestador_deparamento`)?  
+Las etiquetas de los ejes deben ser claras y describir las variables involucradas. Incluir un `caption` (Título) en la figura y algún comentario de interés que describa el gráfico. Puede utilizar `fig.cap` en el chunck de código.
+```{r tres_a, fig.cap="Pretadores con mayor proporción de actos en Montevideo\\label{fig:f4}"}
+gastos %>%
+  filter(Departamento_residencia=='MONTEVIDEO') %>%
+  group_by(Prestador) %>%
+  summarise(frec= n()/nrow(gastos)) %>%
+  arrange(desc(frec)) %>%
+  slice(1:10) %>%
+  ggplot(aes(x=fct_reorder(Prestador,frec,sum),y=frec)) +
+    geom_point() + coord_flip() + labs(x="Prestador",y="Porcentaje de actos médicos") +
+    scale_y_continuous(breaks=seq(2,8,2)/100,labels=paste(seq(2,8,2),'%',sep=''))
+```
+En la Figura \ref{fig:f4} se puede observar que el CASMU y la Asociación Española son quienes proveen la mayor proporción de actos médicos en Montevideo. 
+
+  b. Usando `ggplot2` elabore un gráfico de cajas con el importe del acto médico (en logaritmos) según tipo de prestador y sexo.
+Las etiquetas de los ejes deben ser claras y describir las variables involucradas. Incluir un `caption` (Título) en la figura y algún comentario de interés que describa el gráfico. Puede utilizar `fig.cap` en el chunck de código.
+```{r tres_b, fig.cap="Distribución del Importe de la prestación según Prestador y sexo\\label{fig:f5}"}
+gastos %>%
+  ggplot(aes(x=Prestador_tipo,y=Importe,fill=Sexo)) +
+    geom_boxplot() + scale_x_discrete(name="Tipo de prestador") +
+    scale_y_continuous(name=expression(log[10](Importe)),trans="log10",breaks=10^seq(3,6),labels=10^seq(3,6)) + theme(legend.position="bottom")
+```
+En la Figura \ref{fig:f5} se observa que la distribucion del importe no parece diferir segun sexo.
+
+  c. Se desea explorar la asociación entre la edad del paciente y el importe de los actos médicos (en logaritmos). Realiza alguna visualización para estudiar dicha asociación, y ver como esta varía según el sexo del paciente y el tipo de prestador.
+```{r tres_c, fig.cap="Relación entre el monto del Importe de la prestación y la edad del paciente\\label{fig:f6}"}
+gastos %>%
+  ggplot(aes(x=Edad_años,y=Importe,colour=Sexo)) +
+    geom_point() + scale_x_continuous(name="Edad (años)") +
+    scale_y_continuous(name=expression(log[10](Importe)),trans="log10",breaks=10^seq(3,6),labels=10^seq(3,6)) + facet_grid(.~Prestador_tipo)
+```
+La figura \ref{fig:f6} sugiere que en ninguno de los prestadores se da algún tipo de relación entre el monto del importe y la edad del paciente.
+
+  d. Realiza alguna visualización para estudiar el gasto promedio por persona en cada departamento, tipo de prestador y sexo.
+```{r tres_d, fig.cap="Gasto promedio según departamento, tipo de prestador y sexo\\label{fig:f7}"}
+gastos %>%
+  group_by(Paciente) %>%
+  mutate(plata=sum(Importe)) %>%
+  group_by(Departamento_residencia,Prestador_tipo,Sexo) %>%
+  summarise(g_prom=mean(plata)) %>%
+  ggplot(aes(x=fct_reorder(Departamento_residencia,g_prom,sum),y=g_prom,colour=Sexo)) +
+    geom_point() + scale_x_discrete(name="Departamento") +
+    scale_y_continuous(name="Gasto promedio") + facet_grid(.~Prestador_tipo) +
+    theme(axis.text.x=element_text(angle=90,hjust=0.5,size=5))
+```
+La figura \ref{fig:f7} sugiere que en IAMC, en la mayoría de los departamentos, los hombres gastan mas que la mujeres.
+
+  e. Realiza alguna visualización para estudiar el peso de las prestaciones en cantidad de actos y en monto relativo. ¿Son las prestaciones más comunes las más caras?
+```{r tres_e, fig.cap="Importe promedio de las prestaciones (en millones)\\label{fig:f7}"}
+gastos %>%
+  group_by(Prestacion) %>%
+  summarise(plata=mean(Importe)/1e6, cuantas=n()) %>%
+  ggplot(aes(x=fct_reorder(Prestacion,cuantas,sum),y=plata)) +
+    geom_point() + scale_x_discrete(name="Prestacion") +
+    scale_y_continuous(name="Gasto promedio") +
+    theme(axis.text.x=element_text(angle=90,hjust=0.5,size=5))
+```
+
+Pese a que la figura \ref{fig:f7} presenta a las prestaciones TPH-alogénico y TPH-autólogo como las mas caras, siendo relativamente frecuentes, no se observa una relación tan clara en el resto de las prestaciones.
